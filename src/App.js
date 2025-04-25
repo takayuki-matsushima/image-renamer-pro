@@ -9,6 +9,7 @@ function ImageRenamerPro() {
   const [resizeOption, setResizeOption] = useState("original");
   const [customWidth, setCustomWidth] = useState("");
   const [customHeight, setCustomHeight] = useState("");
+  const [showTooltip, setShowTooltip] = useState(false);
 
   return (
     <div style={{ backgroundColor: "#111", color: "white", padding: 24, fontFamily: "sans-serif", maxWidth: 400, margin: "0 auto", borderRadius: 12 }}>
@@ -54,11 +55,22 @@ function ImageRenamerPro() {
         )}
       </div>
 
-      <div style={{ marginTop: 16 }}>
+      <div style={{ marginTop: 16, position: "relative" }}>
         <label>
           <input type="checkbox" checked={saveToDateFolder} onChange={() => setSaveToDateFolder(!saveToDateFolder)} />
-          日付フォルダに保存
+          日付ごとのフォルダに保存する
         </label>
+        <span
+          onClick={() => setShowTooltip(!showTooltip)}
+          style={{ marginLeft: 8, cursor: "pointer", color: "#0bf" }}
+          title="保存先フォルダを日付ベースで自動作成（例：20250425-001）"
+        >❔</span>
+        {showTooltip && (
+          <div style={{ position: "absolute", top: 24, left: 0, backgroundColor: "#222", padding: "8px 12px", borderRadius: 6, fontSize: 12, width: 300 }}>
+            保存先フォルダを日付ベースで自動作成（例：20250425-001）<br />
+            作業ごとにファイルが整理され、上書きリスクを軽減できます。
+          </div>
+        )}
       </div>
 
       <button onClick={() => alert("変換して保存")} style={{ marginTop: 24, backgroundColor: "#ffc107", color: "#000", padding: "10px 20px", borderRadius: 8 }}>
