@@ -1,3 +1,3 @@
 # ImageRenamer Pro
 
-Reactアプリケーション
+画像・フォルダ選択が可能なReactアプリ
