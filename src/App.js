@@ -2,115 +2,94 @@
 import React, { useState, useRef } from 'react';
 
 function ImageRenamerPro() {
-  const [format, setFormat] = useState("webp");
+  const [files, setFiles] = useState([]);
   const [basename, setBasename] = useState("photo");
-  const [startNumber, setStartNumber] = useState("00001");
-  const [saveToDateFolder, setSaveToDateFolder] = useState(true);
-  const [resizeOption, setResizeOption] = useState("original");
-  const [customWidth, setCustomWidth] = useState("");
-  const [customHeight, setCustomHeight] = useState("");
-  const [showTooltip, setShowTooltip] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [startNumber, setStartNumber] = useState(1);
+  const [quality, setQuality] = useState("medium");
   const fileInputRef = useRef(null);
-  const folderInputRef = useRef(null);
 
-  const handleFileChange = (e) => {
-    setSelectedFiles([...e.target.files]);
+  const qualitySettings = {
+    low: { size: 1000, quality: 0.5 },
+    medium: { size: 2000, quality: 0.75 },
+    high: { size: 3000, quality: 0.95 }
   };
 
-  const handleFolderChange = (e) => {
-    setSelectedFiles([...e.target.files]);
+  const handleFileChange = (e) => {
+    setFiles([...e.target.files]);
+  };
+
+  const resizeAndDownload = (imageFile, index) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const { size, quality: q } = qualitySettings[quality];
+        let scale = size / Math.max(img.width, img.height);
+        if (scale > 1) scale = 1;
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob((blob) => {
+          const link = document.createElement("a");
+          const number = String(startNumber + index).padStart(5, "0");
+          link.download = `${basename}${number}.webp`;
+          link.href = URL.createObjectURL(blob);
+          link.click();
+        }, "image/webp", q);
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(imageFile);
+  };
+
+  const handleConvertAndSave = () => {
+    files.forEach((file, index) => {
+      resizeAndDownload(file, index);
+    });
   };
 
   return (
-    <div style={{ backgroundColor: "#111", color: "white", padding: 24, fontFamily: "sans-serif", maxWidth: 480, margin: "0 auto", borderRadius: 12 }}>
+    <div style={{ backgroundColor: "#111", color: "white", padding: 24, fontFamily: "sans-serif", maxWidth: 500, margin: "0 auto", borderRadius: 12 }}>
       <h2>ImageRenamer Pro</h2>
 
-      <div style={{ marginBottom: 16 }}>
-        <button onClick={() => fileInputRef.current.click()}>🖼️ 画像を選ぶ</button>
-        <input
-          type="file"
-          accept="image/*"
-          multiple
-          style={{ display: "none" }}
-          ref={fileInputRef}
-          onChange={handleFileChange}
-        />
-
-        <button onClick={() => folderInputRef.current.click()} style={{ marginLeft: 10 }}>📂 フォルダを選ぶ</button>
-        <input
-          type="file"
-          webkitdirectory="true"
-          directory=""
-          multiple
-          style={{ display: "none" }}
-          ref={folderInputRef}
-          onChange={handleFolderChange}
-        />
-      </div>
-
-      <label>変換形式</label><br />
-      <select value={format} onChange={(e) => setFormat(e.target.value)}>
-        <option value="webp">webp</option>
-        <option value="png">png</option>
-        <option value="jpg">jpg</option>
-      </select>
+      <button onClick={() => fileInputRef.current.click()}>🖼️ 画像を選ぶ</button>
+      <input
+        type="file"
+        accept="image/*"
+        multiple
+        style={{ display: "none" }}
+        ref={fileInputRef}
+        onChange={handleFileChange}
+      />
 
       <div style={{ marginTop: 16 }}>
-        <label>ファイル名ベース</label><br />
+        <label>ファイル名ベース：</label><br />
         <input value={basename} onChange={(e) => setBasename(e.target.value)} />
       </div>
 
       <div style={{ marginTop: 16 }}>
-        <label>開始番号</label><br />
-        <input value={startNumber} onChange={(e) => setStartNumber(e.target.value)} />
+        <label>開始番号：</label><br />
+        <input type="number" value={startNumber} onChange={(e) => setStartNumber(parseInt(e.target.value, 10))} />
       </div>
 
       <div style={{ marginTop: 16 }}>
-        <label>出力サイズ</label><br />
-        <select value={resizeOption} onChange={(e) => setResizeOption(e.target.value)}>
-          <option value="original">元のサイズのまま</option>
-          <option value="3000">長辺 3000px</option>
-          <option value="2000">長辺 2000px</option>
-          <option value="1000">長辺 1000px</option>
-          <option value="custom">カスタム入力</option>
-        </select>
-
-        {resizeOption === "custom" && (
-          <div style={{ marginTop: 8 }}>
-            <input type="number" placeholder="幅 (px)" value={customWidth} onChange={e => setCustomWidth(e.target.value)} style={{ marginRight: 8, width: 100 }} />
-            <input type="number" placeholder="高さ (px)" value={customHeight} onChange={e => setCustomHeight(e.target.value)} style={{ width: 100 }} />
-          </div>
-        )}
+        <label>解像度と画質：</label><br />
+        <label><input type="radio" value="low" checked={quality === "low"} onChange={() => setQuality("low")} /> 低（1000px / 50%）</label><br />
+        <label><input type="radio" value="medium" checked={quality === "medium"} onChange={() => setQuality("medium")} /> 中（2000px / 75%）</label><br />
+        <label><input type="radio" value="high" checked={quality === "high"} onChange={() => setQuality("high")} /> 高（3000px / 95%）</label>
       </div>
 
-      <div style={{ marginTop: 16, position: "relative" }}>
-        <label>
-          <input type="checkbox" checked={saveToDateFolder} onChange={() => setSaveToDateFolder(!saveToDateFolder)} />
-          日付ごとのフォルダに保存する
-        </label>
-        <span
-          onClick={() => setShowTooltip(!showTooltip)}
-          style={{ marginLeft: 8, cursor: "pointer", color: "#0bf" }}
-          title="保存先フォルダを日付ベースで自動作成（例：20250425-001）"
-        >❔</span>
-        {showTooltip && (
-          <div style={{ position: "absolute", top: 24, left: 0, backgroundColor: "#222", padding: "8px 12px", borderRadius: 6, fontSize: 12, width: 300 }}>
-            保存先フォルダを日付ベースで自動作成（例：20250425-001）<br />
-            作業ごとにファイルが整理され、上書きリスクを軽減できます。
-          </div>
-        )}
-      </div>
-
-      <button onClick={() => alert("変換して保存（仮動作）")} style={{ marginTop: 24, backgroundColor: "#ffc107", color: "#000", padding: "10px 20px", borderRadius: 8 }}>
+      <button onClick={handleConvertAndSave} style={{ marginTop: 24, backgroundColor: "#ffc107", color: "#000", padding: "10px 20px", borderRadius: 8 }}>
         変換して保存
       </button>
 
       <div style={{ marginTop: 24 }}>
         <h4>選択されたファイル:</h4>
         <ul>
-          {selectedFiles.map((file, index) => (
-            <li key={index} style={{ fontSize: 12 }}>{file.webkitRelativePath || file.name}</li>
+          {files.map((file, index) => (
+            <li key={index} style={{ fontSize: 12 }}>{file.name}</li>
           ))}
         </ul>
       </div>

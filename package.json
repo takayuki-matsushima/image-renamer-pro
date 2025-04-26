@@ -1,7 +1,7 @@
 
 {
   "name": "image-renamer-pro",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "dependencies": {
     "react": "^18.2.0",
