@@ -7,7 +7,11 @@ function ImageRenamerPro() {
   const [basename, setBasename] = useState("photo");
   const [startNumber, setStartNumber] = useState(1);
   const [digits, setDigits] = useState(5);
+  const [format, setFormat] = useState("webp");
   const [quality, setQuality] = useState("medium");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [message, setMessage] = useState("");
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
 
@@ -15,6 +19,12 @@ function ImageRenamerPro() {
     low: { size: 1000, quality: 0.5 },
     medium: { size: 2000, quality: 0.75 },
     high: { size: 3000, quality: 0.95 }
+  };
+
+  const mimeTypes = {
+    webp: "image/webp",
+    png: "image/png",
+    jpeg: "image/jpeg"
   };
 
   const handleFileChange = (e) => {
@@ -26,6 +36,9 @@ function ImageRenamerPro() {
   };
 
   const resizeAndZip = async () => {
+    setIsProcessing(true);
+    setMessage("");
+    setProgress(0);
     const zip = new JSZip();
     const { size, quality: q } = qualitySettings[quality];
 
@@ -44,9 +57,10 @@ function ImageRenamerPro() {
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             canvas.toBlob((blob) => {
               const number = String(startNumber + index).padStart(digits, "0");
-              zip.file(`${basename}${number}.webp`, blob);
+              zip.file(`${basename}${number}.${format}`, blob);
+              setProgress(Math.round(((index + 1) / files.length) * 100));
               resolve();
-            }, "image/webp", q);
+            }, mimeTypes[format], q);
           };
           img.src = event.target.result;
         };
@@ -63,6 +77,8 @@ function ImageRenamerPro() {
       link.download = `ImageRenamerPro_${dateStr}.zip`;
       link.href = URL.createObjectURL(content);
       link.click();
+      setIsProcessing(false);
+      setMessage("✅ 変換と保存が完了しました！");
     });
   };
 
@@ -71,7 +87,7 @@ function ImageRenamerPro() {
       <h2>ImageRenamer Pro</h2>
 
       <div style={{ marginBottom: 16 }}>
-        <button onClick={() => fileInputRef.current.click()}>🖼️ 画像を選ぶ</button>
+        <button onClick={() => fileInputRef.current.click()} disabled={isProcessing}>🖼️ 画像を選ぶ</button>
         <input
           type="file"
           accept="image/*"
@@ -81,7 +97,7 @@ function ImageRenamerPro() {
           onChange={handleFileChange}
         />
 
-        <button onClick={() => folderInputRef.current.click()} style={{ marginLeft: 10 }}>📂 フォルダを選ぶ</button>
+        <button onClick={() => folderInputRef.current.click()} style={{ marginLeft: 10 }} disabled={isProcessing}>📂 フォルダを選ぶ</button>
         <input
           type="file"
           webkitdirectory="true"
@@ -95,17 +111,17 @@ function ImageRenamerPro() {
 
       <div style={{ marginTop: 16 }}>
         <label>ファイル名ベース：</label><br />
-        <input value={basename} onChange={(e) => setBasename(e.target.value)} />
+        <input value={basename} onChange={(e) => setBasename(e.target.value)} disabled={isProcessing} />
       </div>
 
       <div style={{ marginTop: 16 }}>
         <label>開始番号：</label><br />
-        <input type="number" value={startNumber} onChange={(e) => setStartNumber(parseInt(e.target.value, 10))} />
+        <input type="number" value={startNumber} onChange={(e) => setStartNumber(parseInt(e.target.value, 10))} disabled={isProcessing} />
       </div>
 
       <div style={{ marginTop: 16 }}>
         <label>桁数（3〜5桁）：</label><br />
-        <select value={digits} onChange={(e) => setDigits(parseInt(e.target.value, 10))}>
+        <select value={digits} onChange={(e) => setDigits(parseInt(e.target.value, 10))} disabled={isProcessing}>
           <option value="3">3桁</option>
           <option value="4">4桁</option>
           <option value="5">5桁</option>
@@ -113,15 +129,35 @@ function ImageRenamerPro() {
       </div>
 
       <div style={{ marginTop: 16 }}>
-        <label>解像度と画質：</label><br />
-        <label><input type="radio" value="low" checked={quality === "low"} onChange={() => setQuality("low")} /> 低（1000px / 50%）</label><br />
-        <label><input type="radio" value="medium" checked={quality === "medium"} onChange={() => setQuality("medium")} /> 中（2000px / 75%）</label><br />
-        <label><input type="radio" value="high" checked={quality === "high"} onChange={() => setQuality("high")} /> 高（3000px / 95%）</label>
+        <label>保存形式：</label><br />
+        <select value={format} onChange={(e) => setFormat(e.target.value)} disabled={isProcessing}>
+          <option value="webp">webp</option>
+          <option value="png">png</option>
+          <option value="jpeg">jpeg</option>
+        </select>
       </div>
 
-      <button onClick={resizeAndZip} style={{ marginTop: 24, backgroundColor: "#ffc107", color: "#000", padding: "10px 20px", borderRadius: 8 }}>
-        変換してZIP保存
+      <div style={{ marginTop: 16 }}>
+        <label>解像度と画質：</label><br />
+        <label><input type="radio" value="low" checked={quality === "low"} onChange={() => setQuality("low")} disabled={isProcessing}/> 低（1000px / 50%）</label><br />
+        <label><input type="radio" value="medium" checked={quality === "medium"} onChange={() => setQuality("medium")} disabled={isProcessing}/> 中（2000px / 75%）</label><br />
+        <label><input type="radio" value="high" checked={quality === "high"} onChange={() => setQuality("high")} disabled={isProcessing}/> 高（3000px / 95%）</label>
+      </div>
+
+      <button onClick={resizeAndZip} disabled={isProcessing} style={{ marginTop: 24, backgroundColor: isProcessing ? "#555" : "#ffc107", color: "#000", padding: "10px 20px", borderRadius: 8 }}>
+        {isProcessing ? "変換中..." : "変換してZIP保存"}
       </button>
+
+      {isProcessing && (
+        <>
+          <div className="spinner"></div>
+          <div className="progress-bar-container">
+            <div className="progress-bar" style={{ width: `${progress}%` }}></div>
+          </div>
+          <div style={{ textAlign: "center", marginTop: 8 }}>{progress}%</div>
+        </>
+      )}
+      {message && <div style={{ marginTop: 20, color: "#0f0", fontWeight: "bold", textAlign: "center" }}>{message}</div>}
 
       <div style={{ marginTop: 24 }}>
         <h4>選択されたファイル:</h4>
